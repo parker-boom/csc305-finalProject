@@ -3,6 +3,7 @@ package finalproject;
 import java.awt.BorderLayout;
 import java.util.List;
 
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
@@ -23,18 +24,23 @@ public class FileBrowserPanel extends JPanel {
     private final DefaultMutableTreeNode rootNode;
     private final DefaultTreeModel treeModel;
     private final JTree tree;
+    private final JLabel headerLabel;
 
     public FileBrowserPanel() {
         super(new BorderLayout());
         this.blackboard = Blackboard.getInstance();
 
-        rootNode = new DefaultMutableTreeNode("Files");
+        rootNode = new DefaultMutableTreeNode();
         treeModel = new DefaultTreeModel(rootNode);
         tree = new JTree(treeModel);
-        tree.setRootVisible(true);
+        tree.setRootVisible(false);
         tree.setShowsRootHandles(true);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         tree.addTreeSelectionListener(e -> handleTreeSelection());
+
+        headerLabel = new JLabel("Files: 0");
+        headerLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        add(headerLabel, BorderLayout.NORTH);
 
         add(new JScrollPane(tree), BorderLayout.CENTER);
 
@@ -45,8 +51,9 @@ public class FileBrowserPanel extends JPanel {
     private void rebuildTree() {
         SwingUtilities.invokeLater(() -> {
             rootNode.removeAllChildren();
-            List<FileStats> files = blackboard.getFiles();
-            for (FileStats stats : files) {
+            List<GridFileData> files = blackboard.getGridFiles();
+            headerLabel.setText("Files: " + files.size());
+            for (GridFileData stats : files) {
                 addPath(stats);
             }
             treeModel.reload();
@@ -70,9 +77,9 @@ public class FileBrowserPanel extends JPanel {
             blackboard.setFolderFilter(path);
         } else {
             blackboard.setFolderFilter(null);
-            FileStats stats = findFileByPath(path);
+            GridFileData stats = findFileByPath(path);
             if (stats != null) {
-                blackboard.setSelected(stats);
+                blackboard.setSelectedFile(stats);
             }
         }
     }
@@ -94,12 +101,12 @@ public class FileBrowserPanel extends JPanel {
         return builder.toString();
     }
 
-    private FileStats findFileByPath(String path) {
+    private GridFileData findFileByPath(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
         String normalizedPath = path.replace('\\', '/');
-        for (FileStats stats : blackboard.getFiles()) {
+        for (GridFileData stats : blackboard.getGridFiles()) {
             String filePath = stats.getName().replace('\\', '/');
             if (filePath.equals(normalizedPath)) {
                 return stats;
@@ -108,7 +115,7 @@ public class FileBrowserPanel extends JPanel {
         return null;
     }
 
-    private void addPath(FileStats stats) {
+    private void addPath(GridFileData stats) {
         DefaultMutableTreeNode parent = rootNode;
         String[] parts = stats.getName().split("[/\\\\]");
         for (int i = 0; i < parts.length; i++) {

@@ -46,13 +46,13 @@ public class FileGridTab extends JPanel {
 
     private void refreshGrid() {
         gridPanel.removeAll();
-        List<FileStats> files = filterFiles(blackboard.getFiles(), blackboard.getFolderFilter());
+        List<GridFileData> files = filterFiles(blackboard.getGridFiles(), blackboard.getFolderFilter());
         int maxLineCount = blackboard.getMaxLineCount();
         if (files.isEmpty()) {
             emptyLabel.setVisible(true);
         } else {
             emptyLabel.setVisible(false);
-            for (FileStats stats : files) {
+            for (GridFileData stats : files) {
                 gridPanel.add(new FileSquare(stats, maxLineCount));
             }
         }
@@ -60,13 +60,13 @@ public class FileGridTab extends JPanel {
         gridPanel.repaint();
     }
 
-    private List<FileStats> filterFiles(List<FileStats> files, String folderFilter) {
+    private List<GridFileData> filterFiles(List<GridFileData> files, String folderFilter) {
         if (folderFilter == null) {
             return files;
         }
-        List<FileStats> filtered = new ArrayList<>();
+        List<GridFileData> filtered = new ArrayList<>();
         String normalizedFilter = folderFilter.endsWith("/") ? folderFilter : folderFilter + "/";
-        for (FileStats stats : files) {
+        for (GridFileData stats : files) {
             String normalizedName = stats.getName().replace('\\', '/');
             if (normalizedName.startsWith(normalizedFilter)) {
                 filtered.add(stats);

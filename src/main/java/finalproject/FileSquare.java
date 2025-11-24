@@ -24,10 +24,10 @@ public class FileSquare extends JPanel {
     private static final Color RED = new Color(204, 0, 0);
 
     private final Blackboard blackboard = Blackboard.getInstance();
-    private final FileStats fileStats;
+    private final GridFileData fileStats;
     private final Color displayColor;
 
-    public FileSquare(FileStats fileStats, int maxLineCount) {
+    public FileSquare(GridFileData fileStats, int maxLineCount) {
         this.fileStats = fileStats;
         setPreferredSize(new Dimension(60, 60));
         setToolTipText(buildTooltip());
@@ -38,7 +38,7 @@ public class FileSquare extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                blackboard.setSelected(fileStats);
+                blackboard.setSelectedFile(fileStats);
             }
         });
 
@@ -51,7 +51,7 @@ public class FileSquare extends JPanel {
                 + " | Complexity: " + fileStats.getComplexity();
     }
 
-    private Color buildColor(FileStats stats, int maxLineCount) {
+    private Color buildColor(GridFileData stats, int maxLineCount) {
         Color base;
         if (stats.getComplexity() > 10) {
             base = RED;
@@ -74,7 +74,7 @@ public class FileSquare extends JPanel {
 
     // For hover
     private void updateSelectionBorder() {
-        if (blackboard.getSelected() == fileStats) {
+        if (blackboard.getSelectedFile() == fileStats) {
             setBorder(BorderFactory.createStrokeBorder(new BasicStroke(3f), Color.BLACK));
         } else {
             setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));

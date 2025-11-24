@@ -24,7 +24,7 @@ public class MetricsTab extends JPanel {
     private static final Color POINT_COLOR = new Color(0x2F2F2F);
 
     private final Blackboard blackboard;
-    private List<FileMetrics> metrics = Collections.emptyList();
+    private List<DiaMetricsData> metrics = Collections.emptyList();
 
     public MetricsTab() {
         blackboard = Blackboard.getInstance();
@@ -34,7 +34,7 @@ public class MetricsTab extends JPanel {
     }
 
     private void handleMetricsUpdate() {
-        metrics = new ArrayList<>(blackboard.getFileMetrics());
+        metrics = new ArrayList<>(blackboard.getDiaMetrics());
         repaint();
     }
 
@@ -94,7 +94,7 @@ public class MetricsTab extends JPanel {
     }
 
     private void plotPoints(Graphics2D g2, int padding, int plotWidth, int plotHeight, int height) {
-        for (FileMetrics metric : metrics) {
+        for (DiaMetricsData metric : metrics) {
             double instability = clamp(metric.getInstability());
             double abstractness = clamp(metric.getAbstractness());
             int x = padding + (int) Math.round(instability * plotWidth);

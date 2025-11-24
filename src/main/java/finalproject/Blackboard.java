@@ -13,17 +13,25 @@ import java.util.Objects;
  * @version 3.0
  */
 public class Blackboard {
+
     private static final Blackboard INSTANCE = new Blackboard();
 
+    // Grid / File data
     private final List<Runnable> dataListeners = new ArrayList<>();
     private final List<Runnable> selectionListeners = new ArrayList<>();
-    private final List<Runnable> metricsListeners = new ArrayList<>();
-    private final List<FileStats> files = new ArrayList<>();
-    private final List<FileMetrics> metrics = new ArrayList<>();
     private final List<Runnable> filterListeners = new ArrayList<>();
-    private FileStats selected;
+    private final List<GridFileData> gridFiles = new ArrayList<>();
+    private GridFileData selectedFile;
     private int maxLineCount;
     private String folderFilter;
+
+    // DIA metrics
+    private final List<Runnable> metricsListeners = new ArrayList<>();
+    private final List<DiaMetricsData> diaMetrics = new ArrayList<>();
+
+    // UML diagram
+    private final List<Runnable> umlListeners = new ArrayList<>();
+    private UmlDiagramData umlDiagram;
 
     public static Blackboard getInstance() {
         return INSTANCE;
@@ -32,53 +40,33 @@ public class Blackboard {
     private Blackboard() {
     }
 
-    public void setFiles(List<FileStats> newFiles) {
-        files.clear();
-        files.addAll(newFiles);
-        maxLineCount = files.stream().mapToInt(FileStats::getLineCount).max().orElse(0);
-        if (!files.contains(selected)) {
-            selected = null;
+    // Grid / File data
+    public void setGridFiles(List<GridFileData> newFiles) {
+        gridFiles.clear();
+        gridFiles.addAll(newFiles);
+        maxLineCount = gridFiles.stream().mapToInt(GridFileData::getLineCount).max().orElse(0);
+        if (!gridFiles.contains(selectedFile)) {
+            selectedFile = null;
         }
         setFolderFilter(null);
         notifyDataListeners();
         notifySelectionListeners();
     }
 
-    public void clear() {
-        files.clear();
-        metrics.clear();
-        selected = null;
-        maxLineCount = 0;
-        setFolderFilter(null);
-        notifyDataListeners();
-        notifyMetricsListeners();
-        notifySelectionListeners();
+    public List<GridFileData> getGridFiles() {
+        return Collections.unmodifiableList(gridFiles);
     }
 
-    public void setSelected(FileStats fileStats) {
-        if (fileStats == selected) {
+    public void setSelectedFile(GridFileData file) {
+        if (file == selectedFile) {
             return;
         }
-        selected = fileStats;
+        selectedFile = file;
         notifySelectionListeners();
     }
 
-    public List<FileStats> getFiles() {
-        return Collections.unmodifiableList(files);
-    }
-
-    public void setFileMetrics(List<FileMetrics> newMetrics) {
-        metrics.clear();
-        metrics.addAll(newMetrics);
-        notifyMetricsListeners();
-    }
-
-    public List<FileMetrics> getFileMetrics() {
-        return Collections.unmodifiableList(metrics);
-    }
-
-    public FileStats getSelected() {
-        return selected;
+    public GridFileData getSelectedFile() {
+        return selectedFile;
     }
 
     public int getMaxLineCount() {
@@ -91,10 +79,6 @@ public class Blackboard {
 
     public void addSelectionListener(Runnable listener) {
         selectionListeners.add(listener);
-    }
-
-    public void addMetricsListener(Runnable listener) {
-        metricsListeners.add(listener);
     }
 
     public void addFilterListener(Runnable listener) {
@@ -125,6 +109,48 @@ public class Blackboard {
         return trimmed.replace('\\', '/');
     }
 
+    // DIA metrics
+    public void setDiaMetrics(List<DiaMetricsData> newMetrics) {
+        diaMetrics.clear();
+        diaMetrics.addAll(newMetrics);
+        notifyMetricsListeners();
+    }
+
+    public List<DiaMetricsData> getDiaMetrics() {
+        return Collections.unmodifiableList(diaMetrics);
+    }
+
+    public void addMetricsListener(Runnable listener) {
+        metricsListeners.add(listener);
+    }
+
+    // UML diagram
+    public void setUmlDiagram(UmlDiagramData umlDiagram) {
+        this.umlDiagram = umlDiagram;
+        notifyUmlListeners();
+    }
+
+    public UmlDiagramData getUmlDiagram() {
+        return umlDiagram;
+    }
+
+    public void addUmlListener(Runnable listener) {
+        umlListeners.add(listener);
+    }
+
+    // Clear/reset (for all data sources)
+    public void clear() {
+        gridFiles.clear();
+        diaMetrics.clear();
+        selectedFile = null;
+        maxLineCount = 0;
+        setFolderFilter(null);
+        notifyDataListeners();
+        notifyMetricsListeners();
+        notifySelectionListeners();
+        setUmlDiagram(null);
+    }
+
     private void notifyDataListeners() {
         for (Runnable listener : dataListeners) {
             listener.run();
@@ -145,6 +171,12 @@ public class Blackboard {
 
     private void notifyFilterListeners() {
         for (Runnable listener : filterListeners) {
+            listener.run();
+        }
+    }
+
+    private void notifyUmlListeners() {
+        for (Runnable listener : umlListeners) {
             listener.run();
         }
     }

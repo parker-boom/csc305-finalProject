@@ -23,12 +23,12 @@ public class SearchBar extends JPanel {
         setLayout(new BorderLayout(8, 0));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        add(new JLabel("GitHub Folder URL"), BorderLayout.WEST);
+        add(new JLabel("Enter GitHub URL:"), BorderLayout.WEST);
 
         urlField = new JTextField();
         urlField.setPreferredSize(new Dimension(400, 28));
 
-        okButton = new JButton("OK");
+        okButton = new JButton("Analyze");
 
         add(urlField, BorderLayout.CENTER);
         add(okButton, BorderLayout.EAST);
@@ -39,7 +39,7 @@ public class SearchBar extends JPanel {
     }
 
     public String getUrlText() {
-        return urlField.getText();
+        return urlField.getText().replaceAll("\\s+", "");
     }
 
     public void setUrlText(String text) {

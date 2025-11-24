@@ -3,9 +3,11 @@ package finalproject;
 /**
  * DIA metrics for a single source file.
  *
+ * @author Parker Jones
+ * @author Ashley Aring
  * @version 2.0
  */
-public class FileMetrics {
+public class DiaMetricsData {
     private final String name;
     private final double abstractness;
     private final double instability;
@@ -13,7 +15,7 @@ public class FileMetrics {
     private final int incoming;
     private final int outgoing;
 
-    public FileMetrics(String name, double abstractness, double instability, double distance, int incoming, int outgoing) {
+    public DiaMetricsData(String name, double abstractness, double instability, double distance, int incoming, int outgoing) {
         this.name = name;
         this.abstractness = abstractness;
         this.instability = instability;

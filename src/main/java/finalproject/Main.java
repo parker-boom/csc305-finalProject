@@ -21,16 +21,16 @@ public class Main extends JPanel {
         super(new BorderLayout());
 
         SearchBar searchBar = new SearchBar();
-        FileBrowserPanel fileBrowserPanel = new FileBrowserPanel();
-        AnalysisTabs analysisTabs = new AnalysisTabs();
         BottomBar bottomBar = new BottomBar();
+        FileBrowserPanel fileBrowserPanel = new FileBrowserPanel();
+        AnalysisTabs analysisTabs = new AnalysisTabs(bottomBar);
         menuBar = new MenuBar();
 
         new Controller(searchBar, bottomBar, menuBar);
 
         add(searchBar, BorderLayout.NORTH);
         JSplitPane centerSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, fileBrowserPanel, analysisTabs);
-        centerSplit.setResizeWeight(0.3);
+        centerSplit.setResizeWeight(0.45); // give browser a bit more width
         centerSplit.setContinuousLayout(true);
         centerSplit.setOneTouchExpandable(true);
         add(centerSplit, BorderLayout.CENTER);
@@ -44,7 +44,7 @@ public class Main extends JPanel {
 
         frame.setContentPane(mainPanel);
         frame.setJMenuBar(mainPanel.getMenuBar());
-        frame.setSize(600, 400);
+        frame.setSize((int) (600 * 2.0), (int) (400 * 2.0)); // doubled size
         frame.setVisible(true);
     }
 

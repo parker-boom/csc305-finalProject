@@ -98,14 +98,18 @@ public class Controller implements ActionListener {
     }
 
     private void fetchUrl(String url) {
-        if (url == null || url.isBlank()) {
-            bottomBar.setStatusMessage("Please provide a URL.");
+        if (url == null || url.isBlank() || url.contains(" ")) {
+            bottomBar.setStatusMessage("Incorrect URL, please enter a GitHub URL in full");
+            return;
+        }
+        if (!url.toLowerCase().contains("github.com")) {
+            bottomBar.setStatusMessage("Incorrect URL, please enter a GitHub URL in full");
             return;
         }
 
         bottomBar.setStatusMessage("Fetching...");
         lastUrl = url;
 
-        new GitFetch(url, gitHubHandler, blackboard, bottomBar).execute();
+        new GitFetch(url, gitHubHandler, blackboard, bottomBar).start();
     }
 }
