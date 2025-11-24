@@ -10,13 +10,17 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
 import net.sourceforge.plantuml.SourceStringReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Renders the UML diagram using PlantUML text from the blackboard.
  *
- * @version 1.0
+ * @version 1.5
  */
 public class DiagramTab extends JPanel {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DiagramTab.class);
 
     private final Blackboard blackboard = Blackboard.getInstance();
     private final JLabel imageLabel;
@@ -48,7 +52,9 @@ public class DiagramTab extends JPanel {
                 Image scaled = rawIcon.getImage().getScaledInstance(imageLabel.getWidth(), -1, Image.SCALE_SMOOTH);
                 imageLabel.setIcon(new ImageIcon(scaled));
                 imageLabel.setText(null);
+                LOG.info("Rendered UML diagram successfully.");
             } catch (Exception ex) {
+                LOG.error("Unable to render UML diagram", ex);
                 imageLabel.setIcon(null);
                 imageLabel.setText("Unable to render UML: " + ex.getMessage());
             }

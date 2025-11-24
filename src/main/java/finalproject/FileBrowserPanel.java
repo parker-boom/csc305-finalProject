@@ -16,7 +16,7 @@ import javax.swing.tree.TreeSelectionModel;
 /**
  * Left-side panel that displays the fetched files in a tree structure.
  *
- * @version 2.0
+ * @version 2.5
  */
 public class FileBrowserPanel extends JPanel {
 

@@ -13,7 +13,7 @@ import javax.swing.JTextField;
  *
  * @author Parker Jones
  * @author Ashley Aring
- * @version 3.0
+ * @version 3.5
  */
 public class SearchBar extends JPanel {
     private final JTextField urlField;

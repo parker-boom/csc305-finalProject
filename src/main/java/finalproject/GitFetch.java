@@ -13,16 +13,19 @@ import javax.swing.SwingUtilities;
 
 import javiergs.tulip.GitHubHandler;
 import javiergs.tulip.URLHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Background worker that fetches and analyzes GitHub files.
  *
- * @version 3.0
+ * @version 3.5
  */
 public class GitFetch implements Runnable {
 
     private static final Pattern COMPLEXITY_PATTERN = Pattern.compile("\\b(if|switch|for|while)\\b");
     private static final Pattern CLASS_NAME_PATTERN = Pattern.compile("\\b([A-Z][A-Za-z0-9_]*)\\b");
+    private static final Logger LOG = LoggerFactory.getLogger(GitFetch.class);
 
     private final String url;
     private final GitHubHandler gitHubHandler;
@@ -56,6 +59,7 @@ public class GitFetch implements Runnable {
             // Stage 1: list files
             List<String> paths = gitHubHandler.listFilesRecursive(url);
             updateStatus("Downloading sources...");
+            LOG.info("Listed {} paths from {}", paths.size(), url);
 
             // Stage 2: download + build grid data and raw parse info
             List<GridFileData> gridFiles = new ArrayList<>();
@@ -68,14 +72,17 @@ public class GitFetch implements Runnable {
                 gridFiles.add(analyzeGridData(path, content));
                 sourceFiles.add(new SourceFile(path, content));
             }
+            LOG.info("Collected {} Java sources from {}", gridFiles.size(), url);
 
             // Stage 3: DIA metrics
             updateStatus("Calculating DIA metrics...");
             List<DiaMetricsData> metrics = buildDiaMetrics(sourceFiles);
+            LOG.info("Calculated DIA metrics for {} files", metrics.size());
 
             // Stage 4: UML
             updateStatus("Building UML...");
             UmlDiagramData uml = buildUml(sourceFiles);
+            LOG.info("Built UML diagram with {} relations", umlRelationsCount(uml));
 
             // Stage 5: publish to UI
             postSuccess(new FetchResult(gridFiles, metrics, uml));
@@ -94,6 +101,10 @@ public class GitFetch implements Runnable {
             } else {
                 bottomBar.setStatusMessage(buildSummary(result));
                 bottomBar.clearOverride();
+                LOG.info("Fetch completed: {} files, avg instability {:.2f}, avg distance {:.2f}",
+                        result.gridFiles.size(),
+                        result.diaMetrics.isEmpty() ? 0.0 : result.diaMetrics.stream().mapToDouble(DiaMetricsData::getInstability).average().orElse(0.0),
+                        result.diaMetrics.isEmpty() ? 0.0 : result.diaMetrics.stream().mapToDouble(DiaMetricsData::getDistance).average().orElse(0.0));
             }
         });
     }
@@ -116,6 +127,7 @@ public class GitFetch implements Runnable {
 
     private void postError(Exception ex) {
         SwingUtilities.invokeLater(() -> {
+            LOG.error("Fetch failed for URL: {}", url, ex);
             bottomBar.setStatusMessage("Error: " + ex.getMessage());
             blackboard.clear();
         });
@@ -218,6 +230,13 @@ public class GitFetch implements Runnable {
 
         builder.append("@enduml");
         return new UmlDiagramData(builder.toString());
+    }
+
+    private int umlRelationsCount(UmlDiagramData uml) {
+        if (uml == null || uml.getPlantUmlText() == null) {
+            return 0;
+        }
+        return (int) uml.getPlantUmlText().lines().filter(line -> line.contains("..>")).count();
     }
 
     private boolean detectInterface(String content, String className) {

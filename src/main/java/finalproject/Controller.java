@@ -5,15 +5,19 @@ import java.awt.event.ActionListener;
 import javax.swing.JOptionPane;
 import io.github.cdimascio.dotenv.Dotenv;
 import javiergs.tulip.GitHubHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Coordinates user actions and background processing.
  *
  * @author Parker Jones
  * @author Ashley Aring
- * @version 3.0
+ * @version 3.5
  */
 public class Controller implements ActionListener {
+    private static final Logger LOG = LoggerFactory.getLogger(Controller.class);
+
     private final SearchBar searchBar;
     private final BottomBar bottomBar;
     private final MenuBar menuBar;
@@ -75,6 +79,7 @@ public class Controller implements ActionListener {
             url = url.trim();
             if (!url.isEmpty()) {
                 searchBar.setUrlText(url);
+                LOG.info("URL provided via menu prompt: {}", url);
                 fetchUrl(url);
             }
         }
@@ -83,33 +88,39 @@ public class Controller implements ActionListener {
     private void reloadLastUrl() {
         if (lastUrl == null || lastUrl.isBlank()) {
             bottomBar.setStatusMessage("Nothing to reload.");
+            LOG.warn("Reload requested but no previous URL available.");
             return;
         }
+        LOG.info("Reloading URL: {}", lastUrl);
         fetchUrl(lastUrl);
     }
 
     private void clearResults() {
+        LOG.info("Clear requested.");
         blackboard.clear();
         bottomBar.setStatusMessage("Cleared.");
     }
 
     private void showAbout() {
+        LOG.info("About dialog opened.");
         JOptionPane.showMessageDialog(searchBar, "Assignment 02\nGitHub folder visualizer.", "About", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void fetchUrl(String url) {
         if (url == null || url.isBlank() || url.contains(" ")) {
             bottomBar.setStatusMessage("Incorrect URL, please enter a GitHub URL in full");
+            LOG.warn("Rejected URL input (blank or contains spaces): {}", url);
             return;
         }
         if (!url.toLowerCase().contains("github.com")) {
             bottomBar.setStatusMessage("Incorrect URL, please enter a GitHub URL in full");
+            LOG.warn("Rejected non-GitHub URL: {}", url);
             return;
         }
 
         bottomBar.setStatusMessage("Fetching...");
         lastUrl = url;
-
+        LOG.info("Starting fetch for URL: {}", url);
         new GitFetch(url, gitHubHandler, blackboard, bottomBar).start();
     }
 }

@@ -11,7 +11,7 @@ import javax.swing.JSplitPane;
  *
  * @author Parker Jones
  * @author Ashley Aring
- * @version 3.0
+ * @version 3.5
  */
 public class Main extends JPanel {
 
@@ -30,7 +30,7 @@ public class Main extends JPanel {
 
         add(searchBar, BorderLayout.NORTH);
         JSplitPane centerSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, fileBrowserPanel, analysisTabs);
-        centerSplit.setResizeWeight(0.45); // give browser a bit more width
+        centerSplit.setResizeWeight(0.45); 
         centerSplit.setContinuousLayout(true);
         centerSplit.setOneTouchExpandable(true);
         add(centerSplit, BorderLayout.CENTER);
@@ -38,13 +38,13 @@ public class Main extends JPanel {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Assignment 03");
+        JFrame frame = new JFrame("CSC305 - Final Project");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Main mainPanel = new Main();
 
         frame.setContentPane(mainPanel);
         frame.setJMenuBar(mainPanel.getMenuBar());
-        frame.setSize((int) (600 * 2.0), (int) (400 * 2.0)); // doubled size
+        frame.setSize((int) (600 * 2.0), (int) (400 * 2.0)); 
         frame.setVisible(true);
     }
 

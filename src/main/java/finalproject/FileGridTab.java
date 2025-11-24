@@ -17,7 +17,7 @@ import javax.swing.SwingConstants;
  *
  * @author Parker Jones
  * @author Ashley Aring
- * @version 2.0
+ * @version 2.5
  */
 public class FileGridTab extends JPanel {
 

@@ -15,7 +15,7 @@ import javax.swing.JPanel;
 /**
  * Displays the DIA chart for the analyzed files.
  *
- * @version 1.0
+ * @version 1.5
  */
 public class MetricsTab extends JPanel {
 
