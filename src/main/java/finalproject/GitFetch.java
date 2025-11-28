@@ -25,6 +25,8 @@ public class GitFetch implements Runnable {
 
     private static final Pattern COMPLEXITY_PATTERN = Pattern.compile("\\b(if|switch|for|while)\\b");
     private static final Pattern CLASS_NAME_PATTERN = Pattern.compile("\\b([A-Z][A-Za-z0-9_]*)\\b");
+    private static final Pattern EXTENDS_PATTERN = Pattern.compile("\\bclass\\s+%s\\s+extends\\s+([A-Z][A-Za-z0-9_]*)");
+    private static final Pattern IMPLEMENTS_PATTERN = Pattern.compile("\\bclass\\s+%s\\s+implements\\s+([A-Za-z0-9_,\\s]+)");
     private static final Logger LOG = LoggerFactory.getLogger(GitFetch.class);
 
     private final String url;
@@ -63,14 +65,14 @@ public class GitFetch implements Runnable {
 
             // Stage 2: download + build grid data and raw parse info
             List<GridFileData> gridFiles = new ArrayList<>();
-            List<SourceFile> sourceFiles = new ArrayList<>();
+            List<UmlBuilder.SourceFile> sourceFiles = new ArrayList<>();
             for (String path : paths) {
                 if (!path.endsWith(".java")) {
                     continue;
                 }
                 String content = gitHubHandler.getFileContent(helper.owner, helper.repo, path, helper.ref);
                 gridFiles.add(analyzeGridData(path, content));
-                sourceFiles.add(new SourceFile(path, content));
+                sourceFiles.add(new UmlBuilder.SourceFile(path, content));
             }
             LOG.info("Collected {} Java sources from {}", gridFiles.size(), url);
 
@@ -81,48 +83,48 @@ public class GitFetch implements Runnable {
 
             // Stage 4: UML
             updateStatus("Building UML...");
-            UmlDiagramData uml = buildUml(sourceFiles);
+            UmlDiagramData uml = new UmlBuilder().build(sourceFiles);
             LOG.info("Built UML diagram with {} relations", umlRelationsCount(uml));
 
             // Stage 5: publish to UI
-            postSuccess(new FetchResult(gridFiles, metrics, uml));
+            publishResults(gridFiles, metrics, uml);
         } catch (Exception ex) {
             postError(ex);
         }
     }
 
-    private void postSuccess(FetchResult result) {
+    private void publishResults(List<GridFileData> gridFiles, List<DiaMetricsData> diaMetrics, UmlDiagramData umlDiagram) {
         SwingUtilities.invokeLater(() -> {
-            blackboard.setGridFiles(result.gridFiles);
-            blackboard.setDiaMetrics(result.diaMetrics);
-            blackboard.setUmlDiagram(result.umlDiagram);
-            if (result.gridFiles.isEmpty()) {
+            blackboard.setGridFiles(gridFiles);
+            blackboard.setDiaMetrics(diaMetrics);
+            blackboard.setUmlDiagram(umlDiagram);
+            if (gridFiles.isEmpty()) {
                 bottomBar.setStatusMessage("No .java files found.");
             } else {
-                bottomBar.setStatusMessage(buildSummary(result));
+                bottomBar.setStatusMessage(buildSummary(gridFiles, diaMetrics));
                 bottomBar.clearOverride();
                 LOG.info("Fetch completed: {} files, avg instability {:.2f}, avg distance {:.2f}",
-                        result.gridFiles.size(),
-                        result.diaMetrics.isEmpty() ? 0.0 : result.diaMetrics.stream().mapToDouble(DiaMetricsData::getInstability).average().orElse(0.0),
-                        result.diaMetrics.isEmpty() ? 0.0 : result.diaMetrics.stream().mapToDouble(DiaMetricsData::getDistance).average().orElse(0.0));
+                        gridFiles.size(),
+                        diaMetrics.isEmpty() ? 0.0 : diaMetrics.stream().mapToDouble(DiaMetricsData::getInstability).average().orElse(0.0),
+                        diaMetrics.isEmpty() ? 0.0 : diaMetrics.stream().mapToDouble(DiaMetricsData::getDistance).average().orElse(0.0));
             }
         });
     }
 
-    private String buildSummary(FetchResult result) {
-        if (result.diaMetrics.isEmpty()) {
-            return result.gridFiles.size() + " files analyzed.";
+    private String buildSummary(List<GridFileData> gridFiles, List<DiaMetricsData> diaMetrics) {
+        if (diaMetrics.isEmpty()) {
+            return gridFiles.size() + " files analyzed.";
         }
-        double avgInstability = result.diaMetrics.stream()
+        double avgInstability = diaMetrics.stream()
                 .mapToDouble(DiaMetricsData::getInstability)
                 .average()
                 .orElse(0.0);
-        double avgDistance = result.diaMetrics.stream()
+        double avgDistance = diaMetrics.stream()
                 .mapToDouble(DiaMetricsData::getDistance)
                 .average()
                 .orElse(0.0);
         return String.format("%d files analyzed | Avg Instability: %.2f | Avg Distance: %.2f",
-                result.gridFiles.size(), avgInstability, avgDistance);
+                gridFiles.size(), avgInstability, avgDistance);
     }
 
     private void postError(Exception ex) {
@@ -155,10 +157,10 @@ public class GitFetch implements Runnable {
     }
 
     // DIA metrics using only repo classes
-    private List<DiaMetricsData> buildDiaMetrics(List<SourceFile> files) {
+    private List<DiaMetricsData> buildDiaMetrics(List<UmlBuilder.SourceFile> files) {
         // Step 1: collect class map and abstract/interface flags
-        Map<String, SourceFile> byName = new HashMap<>();
-        for (SourceFile file : files) {
+        Map<String, UmlBuilder.SourceFile> byName = new HashMap<>();
+        for (UmlBuilder.SourceFile file : files) {
             byName.put(file.className, file);
             file.isInterface = detectInterface(file.content, file.className);
             file.isAbstract = detectAbstractClass(file.content, file.className);
@@ -166,22 +168,19 @@ public class GitFetch implements Runnable {
 
         Set<String> repoClasses = new HashSet<>(byName.keySet());
 
-        // Step 2: find outgoing references to other repo classes
-        for (SourceFile file : files) {
-            Matcher matcher = CLASS_NAME_PATTERN.matcher(file.content);
-            while (matcher.find()) {
-                String candidate = matcher.group(1);
-                if (candidate.equals(file.className) || !repoClasses.contains(candidate)) {
-                    continue;
-                }
-                file.outgoing.add(candidate);
-            }
+        // capture extends/implements (only within repo)
+        for (UmlBuilder.SourceFile file : files) {
+            file.parentClass = resolveExtends(file, repoClasses);
+            file.implementedInterfaces = resolveImplements(file, repoClasses);
         }
 
-        // Step 3: count incoming references
-        for (SourceFile file : files) {
-            for (String target : file.outgoing) {
-                SourceFile targetFile = byName.get(target);
+        // Step 2: collect associations (rough scan for composition/aggregation/dependency)
+        analyzeRelations(files, repoClasses);
+
+        // Step 3: count incoming references (all outgoing kinds)
+        for (UmlBuilder.SourceFile file : files) {
+            for (String target : file.allOutgoing()) {
+                UmlBuilder.SourceFile targetFile = byName.get(target);
                 if (targetFile != null) {
                     targetFile.incomingCount++;
                 }
@@ -190,8 +189,8 @@ public class GitFetch implements Runnable {
 
         // Step 4: compute DIA metrics
         List<DiaMetricsData> metrics = new ArrayList<>();
-        for (SourceFile file : files) {
-            int outgoing = file.outgoing.size();
+        for (UmlBuilder.SourceFile file : files) {
+            int outgoing = file.allOutgoing().size();
             int incoming = file.incomingCount;
             double abstractness = (file.isAbstract || file.isInterface) ? 1.0 : 0.0;
             double denominator = incoming + outgoing;
@@ -202,41 +201,13 @@ public class GitFetch implements Runnable {
         return metrics;
     }
 
-    private UmlDiagramData buildUml(List<SourceFile> files) {
-        // Declare classes/interfaces/abstracts
-        Set<String> seenRelations = new HashSet<>();
-        StringBuilder builder = new StringBuilder();
-        builder.append("@startuml\n");
-
-        for (SourceFile file : files) {
-            if (file.isInterface) {
-                builder.append("interface ").append(file.className).append("\n");
-            } else if (file.isAbstract) {
-                builder.append("abstract class ").append(file.className).append("\n");
-            } else {
-                builder.append("class ").append(file.className).append("\n");
-            }
-        }
-
-        // Add simple dependency arrows between repo classes
-        for (SourceFile file : files) {
-            for (String target : file.outgoing) {
-                String key = file.className + "->" + target;
-                if (seenRelations.add(key)) {
-                    builder.append(file.className).append(" ..> ").append(target).append("\n");
-                }
-            }
-        }
-
-        builder.append("@enduml");
-        return new UmlDiagramData(builder.toString());
-    }
-
     private int umlRelationsCount(UmlDiagramData uml) {
         if (uml == null || uml.getPlantUmlText() == null) {
             return 0;
         }
-        return (int) uml.getPlantUmlText().lines().filter(line -> line.contains("..>")).count();
+        return (int) uml.getPlantUmlText().lines()
+                .filter(line -> line.contains("..>") || line.contains("-->") || line.contains("*--") || line.contains("o--") || line.contains("..|>") || line.contains("--|>"))
+                .count();
     }
 
     private boolean detectInterface(String content, String className) {
@@ -249,38 +220,61 @@ public class GitFetch implements Runnable {
         return abstractClassPattern.matcher(content).find();
     }
 
-    public static final class FetchResult {
-        private final List<GridFileData> gridFiles;
-        private final List<DiaMetricsData> diaMetrics;
-        private final UmlDiagramData umlDiagram;
-
-        private FetchResult(List<GridFileData> gridFiles, List<DiaMetricsData> diaMetrics, UmlDiagramData umlDiagram) {
-            this.gridFiles = gridFiles;
-            this.diaMetrics = diaMetrics;
-            this.umlDiagram = umlDiagram;
+    private void analyzeRelations(List<UmlBuilder.SourceFile> files, Set<String> repoClasses) {
+        for (UmlBuilder.SourceFile file : files) {
+            String[] lines = file.content.split("\\R");
+            for (String line : lines) {
+                String trimmed = line.trim();
+                Matcher matcher = CLASS_NAME_PATTERN.matcher(line);
+                while (matcher.find()) {
+                    String candidate = matcher.group(1);
+                    if (candidate.equals(file.className) || !repoClasses.contains(candidate)) {
+                        continue;
+                    }
+                    boolean hasNew = line.contains("new " + candidate);
+                    boolean looksField = trimmed.matches(".*\\b" + candidate + "\\s+\\w+\\s*(=|;).*");
+                    boolean looksParam = trimmed.matches(".*\\b" + candidate + "\\s+\\w*\\(.*") || trimmed.contains("(" + candidate);
+                    if (hasNew) {
+                        file.compositions.add(candidate);
+                    } else if (looksField) {
+                        file.aggregations.add(candidate);
+                    } else if (looksParam) {
+                        file.dependencies.add(candidate); // treat parameters as dashed dependency
+                    } else {
+                        file.associations.add(candidate); // default to solid association
+                    }
+                }
+            }
         }
     }
 
-    private static final class SourceFile {
-        private final String path;
-        private final String content;
-        private final String className;
-        private final Set<String> outgoing = new HashSet<>();
-        private boolean isInterface;
-        private boolean isAbstract;
-        private int incomingCount;
-
-        private SourceFile(String path, String content) {
-            this.path = path;
-            this.content = content;
-            this.className = extractClassName(path);
+    private String resolveExtends(UmlBuilder.SourceFile file, Set<String> repoClasses) {
+        Pattern extendsPattern = Pattern.compile(String.format(EXTENDS_PATTERN.pattern(), Pattern.quote(file.className)));
+        Matcher matcher = extendsPattern.matcher(file.content);
+        if (matcher.find()) {
+            String parent = matcher.group(1);
+            if (repoClasses.contains(parent)) {
+                return parent;
+            }
         }
-
-        private static String extractClassName(String path) {
-            int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-            String fileName = slash >= 0 ? path.substring(slash + 1) : path;
-            int dot = fileName.lastIndexOf('.');
-            return dot >= 0 ? fileName.substring(0, dot) : fileName;
-        }
+        return null;
     }
+
+    private Set<String> resolveImplements(UmlBuilder.SourceFile file, Set<String> repoClasses) {
+        Set<String> interfaces = new HashSet<>();
+        Pattern implementsPattern = Pattern.compile(String.format(IMPLEMENTS_PATTERN.pattern(), Pattern.quote(file.className)));
+        Matcher matcher = implementsPattern.matcher(file.content);
+        if (matcher.find()) {
+            String group = matcher.group(1);
+            String[] parts = group.split(",");
+            for (String part : parts) {
+                String name = part.trim();
+                if (repoClasses.contains(name)) {
+                    interfaces.add(name);
+                }
+            }
+        }
+        return interfaces;
+    }
+
 }
