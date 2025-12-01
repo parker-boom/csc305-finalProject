@@ -1,13 +1,16 @@
 package finalproject;
 
 /**
- * Data for the grid view: path, line count, and complexity.
+ * ROLE: Data.
+ * Holds a file path plus line count and simple complexity for grid coloring.
+ * Produced by GitFetch and consumed by FileGridTab, FileSquare, and BottomBar summaries.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 2.0
  */
 public class GridFileData {
+
     private final String name;
     private final int lineCount;
     private final int complexity;

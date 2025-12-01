@@ -5,13 +5,16 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 
 /**
- * Application menu bar.
+ * ROLE: View.
+ * Application menu bar exposing menu items for open, reload, clear, about, and exit.
+ * Controller attaches listeners to these items to drive the rest of the app.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 3.0
  */
 public class MenuBar extends JMenuBar {
+
     private final JMenuItem openFromUrlItem;
     private final JMenuItem exitItem;
     private final JMenuItem reloadItem;

@@ -14,7 +14,9 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 /**
- * Left-side panel that displays the fetched files in a tree structure.
+ * ROLE: View.
+ * Displays fetched files in a tree, allowing folder filtering and file selection.
+ * Reads file data from the Blackboard and pushes filter/selection updates back.
  *
  * @version 2.5
  */

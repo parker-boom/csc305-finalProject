@@ -9,13 +9,16 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingConstants;
 
 /**
- * Bottom panel that surfaces status messages during analysis.
+ * ROLE: View.
+ * Bottom status bar that shows progress and aggregated metrics for the current view.
+ * Listens to Blackboard updates and displays messages set by the Controller and GitFetch.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 2.5
  */
 public class BottomBar extends JPanel {
+
     public enum ViewMode {
         GRID,
         DIA,

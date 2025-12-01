@@ -3,22 +3,21 @@ package finalproject;
 import java.awt.BorderLayout;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
 /**
- * Entry point panel for the assignment UI.
+ * Entry point frame for the assignment UI.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 3.5
  */
-public class Main extends JPanel {
+public class Main extends JFrame {
 
     private final MenuBar menuBar;
 
     public Main() {
-        super(new BorderLayout());
+        setLayout(new BorderLayout());
 
         SearchBar searchBar = new SearchBar();
         BottomBar bottomBar = new BottomBar();
@@ -30,7 +29,7 @@ public class Main extends JPanel {
 
         add(searchBar, BorderLayout.NORTH);
         JSplitPane centerSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, fileBrowserPanel, analysisTabs);
-        centerSplit.setResizeWeight(0.45); 
+        centerSplit.setResizeWeight(0.45);
         centerSplit.setContinuousLayout(true);
         centerSplit.setOneTouchExpandable(true);
         add(centerSplit, BorderLayout.CENTER);
@@ -38,17 +37,12 @@ public class Main extends JPanel {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("CSC305 - Final Project");
+        Main frame = new Main();
+
+        frame.setTitle("CSC305 - Final Project");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        Main mainPanel = new Main();
-
-        frame.setContentPane(mainPanel);
-        frame.setJMenuBar(mainPanel.getMenuBar());
-        frame.setSize((int) (600 * 2.0), (int) (400 * 2.0)); 
+        frame.setJMenuBar(frame.menuBar);
+        frame.setSize(1200, 800);
         frame.setVisible(true);
-    }
-
-    public MenuBar getMenuBar() {
-        return menuBar;
     }
 }

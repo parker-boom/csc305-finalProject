@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Coordinates user actions and background processing.
+ * ROLE: Controller.
+ * Coordinates user actions (URL input, menu commands) and triggers GitHub fetch and analysis.
+ * Wires SearchBar and MenuBar inputs to GitFetch/Blackboard updates and status messages.
  *
  * @author Parker Jones
  * @author Ashley Aring
@@ -36,7 +38,14 @@ public class Controller implements ActionListener {
                 .ignoreIfMalformed()
                 .ignoreIfMissing()
                 .load();
-        this.gitHubHandler = new GitHubHandler(dotenv.get("GH_ACCESS_TOKEN"));
+        String token = dotenv.get("GH_ACCESS_TOKEN");
+        if (token == null || token.isBlank()) {
+            LOG.warn("GH_ACCESS_TOKEN missing; prompt user to configure .env");
+            gitHubHandler = null;
+            bottomBar.setStatusMessage("Add GH_ACCESS_TOKEN in src/main/java/finalproject/.env and retry.");
+        } else {
+            this.gitHubHandler = new GitHubHandler(token);
+        }
 
         attachListeners();
     }
@@ -51,6 +60,7 @@ public class Controller implements ActionListener {
         menuBar.getExitItem().addActionListener(this);
     }
 
+    // Menu and button events
     @Override
     public void actionPerformed(ActionEvent event) {
         Object source = event.getSource();
@@ -107,6 +117,11 @@ public class Controller implements ActionListener {
     }
 
     private void fetchUrl(String url) {
+        if (gitHubHandler == null) {
+            bottomBar.setStatusMessage("Missing GH_ACCESS_TOKEN; add it to .env then retry.");
+            LOG.warn("Fetch aborted: no GH_ACCESS_TOKEN configured.");
+            return;
+        }
         if (url == null || url.isBlank() || url.contains(" ")) {
             bottomBar.setStatusMessage("Incorrect URL, please enter a GitHub URL in full");
             LOG.warn("Rejected URL input (blank or contains spaces): {}", url);

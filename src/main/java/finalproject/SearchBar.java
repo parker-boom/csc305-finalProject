@@ -9,13 +9,16 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * Top panel that captures the GitHub folder URL.
+ * ROLE: View.
+ * Captures the GitHub folder URL and exposes the analyze trigger for the controller.
+ * Controller reads the URL text and listens to the button to start Git fetches.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 3.5
  */
 public class SearchBar extends JPanel {
+
     private final JTextField urlField;
     private final JButton okButton;
 

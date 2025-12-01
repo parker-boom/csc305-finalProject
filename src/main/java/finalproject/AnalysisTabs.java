@@ -4,15 +4,17 @@ import java.awt.BorderLayout;
 
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hosts the tabbed analysis views.
+ * ROLE: View.
+ * Container for the grid, metrics, and diagram tabs, switching the BottomBar view mode.
+ * Instantiated in Main and connects each tab to shared Blackboard data.
  *
  * @version 1.5
+ * @author Parker Jones
+ * @author Ashley Aring
  */
 public class AnalysisTabs extends JPanel {
 
@@ -30,7 +32,7 @@ public class AnalysisTabs extends JPanel {
         tabbedPane.addTab("Grid", gridTab);
         tabbedPane.addTab("Metrics", new MetricsTab());
         tabbedPane.addTab("Diagram", new DiagramTab());
-        tabbedPane.addChangeListener(new TabChangeHandler(tabbedPane));
+        tabbedPane.addChangeListener(e -> handleTabChange(tabbedPane.getSelectedIndex()));
         bottomBar.setView(BottomBar.ViewMode.GRID);
 
         add(tabbedPane, BorderLayout.CENTER);
@@ -40,26 +42,16 @@ public class AnalysisTabs extends JPanel {
         return gridTab;
     }
 
-    private class TabChangeHandler implements ChangeListener {
-        private final JTabbedPane tabbedPane;
-
-        private TabChangeHandler(JTabbedPane tabbedPane) {
-            this.tabbedPane = tabbedPane;
-        }
-
-        @Override
-        public void stateChanged(ChangeEvent e) {
-            int index = tabbedPane.getSelectedIndex();
-            if (index == 0) {
-                bottomBar.setView(BottomBar.ViewMode.GRID);
-                LOG.info("Switched to Grid tab");
-            } else if (index == 1) {
-                bottomBar.setView(BottomBar.ViewMode.DIA);
-                LOG.info("Switched to Metrics tab");
-            } else if (index == 2) {
-                bottomBar.setView(BottomBar.ViewMode.UML);
-                LOG.info("Switched to Diagram tab");
-            }
+    private void handleTabChange(int index) {
+        if (index == 0) {
+            bottomBar.setView(BottomBar.ViewMode.GRID);
+            LOG.info("Switched to Grid tab");
+        } else if (index == 1) {
+            bottomBar.setView(BottomBar.ViewMode.DIA);
+            LOG.info("Switched to Metrics tab");
+        } else if (index == 2) {
+            bottomBar.setView(BottomBar.ViewMode.UML);
+            LOG.info("Switched to Diagram tab");
         }
     }
 }

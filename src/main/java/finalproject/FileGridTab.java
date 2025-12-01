@@ -13,7 +13,9 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
 
 /**
- * Central panel that lays out file squares.
+ * ROLE: View.
+ * Lays out file squares for the fetched Java files, optionally filtered by folder.
+ * Subscribes to Blackboard data/filter changes and rebuilds the grid accordingly.
  *
  * @author Parker Jones
  * @author Ashley Aring
@@ -47,7 +49,7 @@ public class FileGridTab extends JPanel {
     private void refreshGrid() {
         gridPanel.removeAll();
         List<GridFileData> files = filterFiles(blackboard.getGridFiles(), blackboard.getFolderFilter());
-        int maxLineCount = blackboard.getMaxLineCount();
+        int maxLineCount = files.stream().mapToInt(GridFileData::getLineCount).max().orElse(0);
         if (files.isEmpty()) {
             emptyLabel.setVisible(true);
         } else {

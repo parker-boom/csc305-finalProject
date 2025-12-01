@@ -15,9 +15,11 @@ At a high level, we follow a simple MVC-ish pattern: `Controller` wires user act
 - Install Java 21 JDK and Maven on your PATH.
 - Clone the repo and create an `.env` at `src/main/java/finalproject/.env` with:
   ```
-  GH_ACCESS_TOKEN="your_token_here"
+  GH_ACCESS_TOKEN="ghp_your_personal_access_token"
   ```
-  (Personal access token needs repo read permissions.)
+  - Create the token in GitHub with “repo” read permissions only.
+  - Keep the `.env` local (it is already gitignored); do not commit secrets.
+  - Example folder to test: `https://github.com/vikasnair/Course-Management-System/tree/master/src`
 
 ## Running
 
@@ -32,7 +34,7 @@ mvn exec:java
 ## Using the app
 
 1. Launch the app.
-2. Enter a GitHub folder URL (e.g., `https://github.com/org/repo/tree/main/src`).
+2. Enter a GitHub folder URL (e.g., `https://github.com/vikasnair/Course-Management-System/tree/master/src`).
 3. Click “Analyze.” Status shows progress; tabs update when done.
 4. Browse files on the left to filter the grid; switch tabs to see metrics or the UML diagram.
 

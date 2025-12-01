@@ -1,13 +1,16 @@
 package finalproject;
 
 /**
- * DIA metrics for a single source file.
+ * ROLE: Data.
+ * Carries abstractness, instability, and distance metrics for one source file.
+ * Filled by GitFetch DIA analysis and rendered in MetricsTab and BottomBar stats.
  *
  * @author Parker Jones
  * @author Ashley Aring
  * @version 2.0
  */
 public class DiaMetricsData {
+
     private final String name;
     private final double abstractness;
     private final double instability;

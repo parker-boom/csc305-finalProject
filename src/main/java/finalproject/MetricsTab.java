@@ -13,8 +13,12 @@ import java.util.List;
 import javax.swing.JPanel;
 
 /**
- * Displays the DIA chart for the analyzed files.
+ * ROLE: View.
+ * Draws the DIA scatter plot for analyzed files using abstractness vs. instability.
+ * Listens to Blackboard DIA metrics and repaints when new results arrive.
  *
+ * @author Parker Jones
+ * @author Ashley Aring
  * @version 1.5
  */
 public class MetricsTab extends JPanel {

@@ -11,7 +11,9 @@ import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 
 /**
- * Square panel that represents one file in the grid.
+ * ROLE: View.
+ * Represents a single file in the grid with color/opacity based on complexity and size.
+ * Displays stats in a tooltip and updates Blackboard selection on click.
  *
  * @author Parker Jones
  * @author Ashley Aring

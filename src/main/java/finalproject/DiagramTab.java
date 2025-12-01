@@ -14,9 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Renders the UML diagram using PlantUML text from the blackboard.
+ * ROLE: View.
+ * Renders the UML diagram from PlantUML text provided by the analysis.
+ * Subscribes to Blackboard UML updates and scales the image into the panel.
  *
  * @version 1.5
+ * @author Parker Jones
+ * @author Ashley Aring
  */
 public class DiagramTab extends JPanel {
 
@@ -49,8 +53,11 @@ public class DiagramTab extends JPanel {
                 SourceStringReader reader = new SourceStringReader(uml.getPlantUmlText());
                 reader.outputImage(out);
                 ImageIcon rawIcon = new ImageIcon(out.toByteArray());
-                Image scaled = rawIcon.getImage().getScaledInstance(imageLabel.getWidth(), -1, Image.SCALE_SMOOTH);
-                imageLabel.setIcon(new ImageIcon(scaled));
+                int targetWidth = imageLabel.getWidth();
+                Image displayImage = targetWidth > 0
+                        ? rawIcon.getImage().getScaledInstance(targetWidth, -1, Image.SCALE_SMOOTH)
+                        : rawIcon.getImage();
+                imageLabel.setIcon(new ImageIcon(displayImage));
                 imageLabel.setText(null);
                 LOG.info("Rendered UML diagram successfully.");
             } catch (Exception ex) {

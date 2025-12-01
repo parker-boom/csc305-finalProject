@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.Timer;
 import javax.swing.SwingUtilities;
 
 import javiergs.tulip.GitHubHandler;
@@ -17,9 +18,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Background worker that fetches and analyzes GitHub files.
+ * ROLE: Data/Service.
+ * Background worker that fetches a GitHub folder, extracts metrics, and builds UML text.
+ * Uses GitHubHandler to download sources, produces data objects, and publishes them to the Blackboard/BottomBar.
  *
  * @version 3.5
+ * @author Parker Jones
+ * @author Ashley Aring
  */
 public class GitFetch implements Runnable {
 
@@ -65,14 +70,14 @@ public class GitFetch implements Runnable {
 
             // Stage 2: download + build grid data and raw parse info
             List<GridFileData> gridFiles = new ArrayList<>();
-            List<UmlBuilder.SourceFile> sourceFiles = new ArrayList<>();
+            List<ParsedSource> sourceFiles = new ArrayList<>();
             for (String path : paths) {
                 if (!path.endsWith(".java")) {
                     continue;
                 }
                 String content = gitHubHandler.getFileContent(helper.owner, helper.repo, path, helper.ref);
                 gridFiles.add(analyzeGridData(path, content));
-                sourceFiles.add(new UmlBuilder.SourceFile(path, content));
+                sourceFiles.add(new ParsedSource(path, content));
             }
             LOG.info("Collected {} Java sources from {}", gridFiles.size(), url);
 
@@ -101,12 +106,22 @@ public class GitFetch implements Runnable {
             if (gridFiles.isEmpty()) {
                 bottomBar.setStatusMessage("No .java files found.");
             } else {
-                bottomBar.setStatusMessage(buildSummary(gridFiles, diaMetrics));
-                bottomBar.clearOverride();
-                LOG.info("Fetch completed: {} files, avg instability {:.2f}, avg distance {:.2f}",
+                String summary = buildSummary(gridFiles, diaMetrics);
+                bottomBar.setStatusMessage(summary);
+                Timer timer = new Timer(2500, e -> bottomBar.clearOverride());
+                timer.setRepeats(false);
+                timer.start();
+
+                double avgInstability = diaMetrics.isEmpty()
+                        ? 0.0
+                        : diaMetrics.stream().mapToDouble(DiaMetricsData::getInstability).average().orElse(0.0);
+                double avgDistance = diaMetrics.isEmpty()
+                        ? 0.0
+                        : diaMetrics.stream().mapToDouble(DiaMetricsData::getDistance).average().orElse(0.0);
+                LOG.info("Fetch completed: {} files, avg instability {}, avg distance {}",
                         gridFiles.size(),
-                        diaMetrics.isEmpty() ? 0.0 : diaMetrics.stream().mapToDouble(DiaMetricsData::getInstability).average().orElse(0.0),
-                        diaMetrics.isEmpty() ? 0.0 : diaMetrics.stream().mapToDouble(DiaMetricsData::getDistance).average().orElse(0.0));
+                        String.format("%.2f", avgInstability),
+                        String.format("%.2f", avgDistance));
             }
         });
     }
@@ -157,10 +172,10 @@ public class GitFetch implements Runnable {
     }
 
     // DIA metrics using only repo classes
-    private List<DiaMetricsData> buildDiaMetrics(List<UmlBuilder.SourceFile> files) {
+    private List<DiaMetricsData> buildDiaMetrics(List<ParsedSource> files) {
         // Step 1: collect class map and abstract/interface flags
-        Map<String, UmlBuilder.SourceFile> byName = new HashMap<>();
-        for (UmlBuilder.SourceFile file : files) {
+        Map<String, ParsedSource> byName = new HashMap<>();
+        for (ParsedSource file : files) {
             byName.put(file.className, file);
             file.isInterface = detectInterface(file.content, file.className);
             file.isAbstract = detectAbstractClass(file.content, file.className);
@@ -169,7 +184,7 @@ public class GitFetch implements Runnable {
         Set<String> repoClasses = new HashSet<>(byName.keySet());
 
         // capture extends/implements (only within repo)
-        for (UmlBuilder.SourceFile file : files) {
+        for (ParsedSource file : files) {
             file.parentClass = resolveExtends(file, repoClasses);
             file.implementedInterfaces = resolveImplements(file, repoClasses);
         }
@@ -178,9 +193,9 @@ public class GitFetch implements Runnable {
         analyzeRelations(files, repoClasses);
 
         // Step 3: count incoming references (all outgoing kinds)
-        for (UmlBuilder.SourceFile file : files) {
+        for (ParsedSource file : files) {
             for (String target : file.allOutgoing()) {
-                UmlBuilder.SourceFile targetFile = byName.get(target);
+                ParsedSource targetFile = byName.get(target);
                 if (targetFile != null) {
                     targetFile.incomingCount++;
                 }
@@ -189,7 +204,7 @@ public class GitFetch implements Runnable {
 
         // Step 4: compute DIA metrics
         List<DiaMetricsData> metrics = new ArrayList<>();
-        for (UmlBuilder.SourceFile file : files) {
+        for (ParsedSource file : files) {
             int outgoing = file.allOutgoing().size();
             int incoming = file.incomingCount;
             double abstractness = (file.isAbstract || file.isInterface) ? 1.0 : 0.0;
@@ -220,8 +235,8 @@ public class GitFetch implements Runnable {
         return abstractClassPattern.matcher(content).find();
     }
 
-    private void analyzeRelations(List<UmlBuilder.SourceFile> files, Set<String> repoClasses) {
-        for (UmlBuilder.SourceFile file : files) {
+    private void analyzeRelations(List<ParsedSource> files, Set<String> repoClasses) {
+        for (ParsedSource file : files) {
             String[] lines = file.content.split("\\R");
             for (String line : lines) {
                 String trimmed = line.trim();
@@ -248,7 +263,7 @@ public class GitFetch implements Runnable {
         }
     }
 
-    private String resolveExtends(UmlBuilder.SourceFile file, Set<String> repoClasses) {
+    private String resolveExtends(ParsedSource file, Set<String> repoClasses) {
         Pattern extendsPattern = Pattern.compile(String.format(EXTENDS_PATTERN.pattern(), Pattern.quote(file.className)));
         Matcher matcher = extendsPattern.matcher(file.content);
         if (matcher.find()) {
@@ -260,7 +275,7 @@ public class GitFetch implements Runnable {
         return null;
     }
 
-    private Set<String> resolveImplements(UmlBuilder.SourceFile file, Set<String> repoClasses) {
+    private Set<String> resolveImplements(ParsedSource file, Set<String> repoClasses) {
         Set<String> interfaces = new HashSet<>();
         Pattern implementsPattern = Pattern.compile(String.format(IMPLEMENTS_PATTERN.pattern(), Pattern.quote(file.className)));
         Matcher matcher = implementsPattern.matcher(file.content);

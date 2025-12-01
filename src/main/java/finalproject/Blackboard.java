@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Shared state between the controller and the UI panels.
+ * ROLE: Data.
+ * Shared state and notifications connecting controller logic to all views via listeners.
+ * Controllers push fetch results here; UI panels read and react through listener hooks.
  *
  * @author Parker Jones
  * @author Ashley Aring
@@ -16,7 +18,14 @@ public class Blackboard {
 
     private static final Blackboard INSTANCE = new Blackboard();
 
-    // Grid / File data
+    public static Blackboard getInstance() {
+        return INSTANCE;
+    }
+
+    private Blackboard() {
+    }
+
+    // Grid / File data variables
     private final List<Runnable> dataListeners = new ArrayList<>();
     private final List<Runnable> selectionListeners = new ArrayList<>();
     private final List<Runnable> filterListeners = new ArrayList<>();
@@ -25,22 +34,30 @@ public class Blackboard {
     private int maxLineCount;
     private String folderFilter;
 
-    // DIA metrics
+    // DIA metrics variables
     private final List<Runnable> metricsListeners = new ArrayList<>();
     private final List<DiaMetricsData> diaMetrics = new ArrayList<>();
 
-    // UML diagram
+    // UML diagram variables
     private final List<Runnable> umlListeners = new ArrayList<>();
     private UmlDiagramData umlDiagram;
 
-    public static Blackboard getInstance() {
-        return INSTANCE;
+    // Clear/reset (for all data sources)
+    public void clear() {
+        gridFiles.clear();
+        diaMetrics.clear();
+        selectedFile = null;
+        maxLineCount = 0;
+        setFolderFilter(null);
+        notifyDataListeners();
+        notifyMetricsListeners();
+        notifySelectionListeners();
+        setUmlDiagram(null);
     }
 
-    private Blackboard() {
-    }
-
-    // Grid / File data
+    /* 
+    Grid / File data methods
+     */
     public void setGridFiles(List<GridFileData> newFiles) {
         gridFiles.clear();
         gridFiles.addAll(newFiles);
@@ -109,7 +126,9 @@ public class Blackboard {
         return trimmed.replace('\\', '/');
     }
 
-    // DIA metrics
+    /*
+    DIA metrics methods
+     */
     public void setDiaMetrics(List<DiaMetricsData> newMetrics) {
         diaMetrics.clear();
         diaMetrics.addAll(newMetrics);
@@ -124,7 +143,9 @@ public class Blackboard {
         metricsListeners.add(listener);
     }
 
-    // UML diagram
+    /*
+    UML diagram data methods
+     */
     public void setUmlDiagram(UmlDiagramData umlDiagram) {
         this.umlDiagram = umlDiagram;
         notifyUmlListeners();
@@ -138,19 +159,9 @@ public class Blackboard {
         umlListeners.add(listener);
     }
 
-    // Clear/reset (for all data sources)
-    public void clear() {
-        gridFiles.clear();
-        diaMetrics.clear();
-        selectedFile = null;
-        maxLineCount = 0;
-        setFolderFilter(null);
-        notifyDataListeners();
-        notifyMetricsListeners();
-        notifySelectionListeners();
-        setUmlDiagram(null);
-    }
-
+    /* 
+    All listener notifications
+     */
     private void notifyDataListeners() {
         for (Runnable listener : dataListeners) {
             listener.run();
